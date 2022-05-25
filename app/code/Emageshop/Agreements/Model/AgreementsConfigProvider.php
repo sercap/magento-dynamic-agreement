@@ -82,7 +82,7 @@ class AgreementsConfigProvider extends \Magento\CheckoutAgreements\Model\Agreeme
         $this->_priceHelper        = $priceHelper;
         $this->_remoteAddress      = $remoteAddress;
 
-        $this->setParams($customerSession->getCustomer()->getId());
+        $this->setParams();
 
         $this->checkoutAgreementsList      = $checkoutAgreementsList ?: ObjectManager::getInstance()->get(
             CheckoutAgreementsListInterface::class
@@ -200,7 +200,7 @@ class AgreementsConfigProvider extends \Magento\CheckoutAgreements\Model\Agreeme
         return $content;
     }
 
-    private function setParams($customerId)
+    private function setParams()
     {
         $quote           = $this->_cart->getQuote();
         $shippingAddress = $quote->getShippingAddress();
@@ -222,13 +222,28 @@ class AgreementsConfigProvider extends \Magento\CheckoutAgreements\Model\Agreeme
             'SHIPPING_METHOD'        => $shippingAddress->getShippingMethod(),
             'SHIPPING_AMOUNT'        => $this->_priceHelper->currency($shippingAddress->getShippingAmount(),
                 true, false),
-            'BUYER_SHIPPING_ADDRESS' => $this->removePhoneFromAddress($this->_addressConfig->getFormatByCode('html')->getRenderer()->renderArray($shippingAddress)),
-            'BUYER_BILLING_ADDRESS'  => $this->removePhoneFromAddress($this->_addressConfig->getFormatByCode('html')->getRenderer()->renderArray($billingAddress)),
-            'PAYMENT_METHOD'         => $quote->getPayment()->getMethodInstance("method_title")->getTitle(),
             'BASKET_ITEMS'           => $this->createBasketItemsTable($allItems),
             'SUB_TOTAL'              => $this->_priceHelper->currency($subTotal, true, false),
             'GRAND_TOTAL'            => $this->_priceHelper->currency($grandTotal, true, false),
         ];
+        
+        try {
+            $this->_content_params['BUYER_SHIPPING_ADDRESS'] = $this->removePhoneFromAddress($this->_addressConfig->getFormatByCode('html')->getRenderer()->renderArray($shippingAddress));
+        } catch (\Exception $e) {
+            $this->_content_params['BUYER_SHIPPING_ADDRESS'] = "";
+        }
+
+        try {
+            $this->_content_params['BUYER_BILLING_ADDRESS'] = $this->removePhoneFromAddress($this->_addressConfig->getFormatByCode('html')->getRenderer()->renderArray($billingAddress));
+        } catch (\Exception $e) {
+            $this->_content_params['BUYER_BILLING_ADDRESS'] = "";
+        }
+
+        try {
+            $this->_content_params['PAYMENT_METHOD'] = $quote->getPayment()->getMethodInstance("method_title")->getTitle();
+        } catch (\Exception $e) {
+            $this->_content_params['PAYMENT_METHOD'] = "";
+        }
 
         foreach ($storeInfo->getData() as $key => $val){
             $this->_content_params["STORE_" . strtoupper($key)] = $val;
